@@ -10,9 +10,11 @@ daily memory
 ## Amarican LLM
 - [Grok](https://grok.com/)
 - [Copilot](https://copilot.microsoft.com)
+- [Gemini](https://aistudio.google.com/)
 - [Perplexity](https://www.perplexity.ai/)
 - [Poe](https://poe.com/)
 - [Midjourney](https://www.midjourney.com/)
+- [Claude](https://claude.ai)
 
 ## Chinese LLM
 - [QianWen](https://www.tongyi.com/)
