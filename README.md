@@ -1,6 +1,7 @@
 # renz
 daily memory
 
+[AI tools](https://ai-bot.cn)
 
 ## AI Agent
 - [Skywork](https://www.tiangong.cn/)
