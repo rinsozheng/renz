@@ -8,14 +8,18 @@ daily memory
 
 ## Amarican LLM
 - [Grok](https://grok.com/)
+- [Copilot](https://copilot.microsoft.com)
 - [Perplexity](https://www.perplexity.ai/)
 - [Poe](https://poe.com/)
 - [Midjourney](https://www.midjourney.com/)
 
 ## Chinese LLM
 - [QianWen](https://www.tongyi.com/)
+- [DeepSeek](https://chat.deepseek.com)
 - [DouBao](https://www.doubao.com/)
+- [YuanBao](https://yuanbao.tencent.com)
 - [HunYuan](https://hunyuan.tencent.com/)
+- [Kimi](https://www.kimi.com)
 - [ChatGLM](https://chatglm.cn/)
 - [Monica](https://monica.cn/)
 
