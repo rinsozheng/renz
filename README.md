@@ -18,3 +18,9 @@ daily memory
 - [HunYuan](https://hunyuan.tencent.com/)
 - [ChatGLM](https://chatglm.cn/)
 - [Monica](https://monica.cn/)
+
+## HW
+- [MlOps](https://mlops.huawei.com)
+- [DevMate](https://devmate.huawei.com)
+- [Asko3](https://asko3.o3community.huawei.com)
+- [FAE](http://faecopilot.rnd.huawei.com)
