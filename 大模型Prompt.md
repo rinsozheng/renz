@@ -1,3 +1,9 @@
+<pre style="white-space: pre-wrap; word-wrap: break-word;">
+function veryLongFunctionName(parameter1, parameter2, parameter3, parameter4) {
+    console.log('This is a very long line of code that should wrap within the container.');
+}
+</pre>
+
 - 20250528 业务无损恢复之商用航天洞察分析
 ```
 背景： 我是一个技术研究员，现在要做一份云化核心网高稳的技术洞察报告，分析商用航天业高可靠行业是如何做到业务无损的。首先，我们要明确高稳业务无损的理念，过去我们追求高稳定性，强调的是网络单元故障后，业务快速恢复，比如业务恢复时长小于15分钟，但现在我们要关注到客户体验，在网络系统内部单元故障后，要能做到业务无损，用户无感知。因此，业务无损的定义可以初步这样定义：当系统中的软件或者硬件故障后，外部用户不感知。业界比如商用航天业（如SpaceX的Starship可重复使用火箭）系统似乎也可以做到，请帮忙做一个严谨的文档，全面系统的回答，技术要深入一点分析。
