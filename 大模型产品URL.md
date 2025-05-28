@@ -6,6 +6,8 @@ daily memory
 ## AI Agent
 - [Skywork](https://www.tiangong.cn/)
 - [Manus](https://manus.im/)
+- [Coze](https://space.coze.cn)
+- [MetaGPT](https://mgx.dev)
 
 ## Amarican LLM
 - [Grok](https://grok.com/)
