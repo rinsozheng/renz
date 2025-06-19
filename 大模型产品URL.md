@@ -9,6 +9,7 @@ daily memory
 - [Coze](https://space.coze.cn)
 - [MetaGPT](https://mgx.dev)
 - [GenSpark](https://www.genspark.ai)
+- [MiniMax](https://agent.minimax.io/)
 
 ## Amarican LLM
 - [Grok](https://grok.com/)
