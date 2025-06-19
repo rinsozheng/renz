@@ -8,6 +8,7 @@ daily memory
 - [Manus](https://manus.im/)
 - [Coze](https://space.coze.cn)
 - [MetaGPT](https://mgx.dev)
+- [GenSpark](https://www.genspark.ai)
 
 ## Amarican LLM
 - [Grok](https://grok.com/)
