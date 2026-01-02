@@ -12,9 +12,9 @@ daily memory
 - [MiniMax](https://agent.minimax.io/)
 
 ## Amarican LLM
+- [Gemini](https://gemini.google.com/)
 - [Grok](https://grok.com/)
 - [Copilot](https://copilot.microsoft.com)
-- [Gemini](https://aistudio.google.com/)
 - [ChatGPT](https://chatgpt.com/)
 - [Perplexity](https://www.perplexity.ai/)
 - [Poe](https://poe.com/)
