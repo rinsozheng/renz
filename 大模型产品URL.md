@@ -12,6 +12,7 @@ daily memory
 - [MiniMax](https://agent.minimax.io/)
 
 ## Amarican LLM
+- [NotebookLM](https://notebooklm.google.com/)
 - [Gemini](https://gemini.google.com/)
 - [Grok](https://grok.com/)
 - [Copilot](https://copilot.microsoft.com)
