@@ -23,6 +23,7 @@ daily memory
 - [Poe](https://poe.com/)
 - [Midjourney](https://www.midjourney.com/)
 - [Claude](https://claude.ai)
+- [Lovable](https://lovable.dev)
 
 ## Chinese LLM
 - [QianWen](https://www.tongyi.com/)
