@@ -12,7 +12,8 @@ daily memory
 - [MetaGPT](https://mgx.dev)
 - [GenSpark](https://www.genspark.ai)
 - [MiniMax](https://agent.minimax.io/)
-- [Opencode](https://github.com/anomalyco/opencode)
+- [OpenCode](https://github.com/anomalyco/opencode)
+- [OpenClaw](htyps://openclaw.ai)
 
 ## Amarican LLM
 - [NotebookLM](https://notebooklm.google.com/)
