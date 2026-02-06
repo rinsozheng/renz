@@ -13,7 +13,7 @@ daily memory
 - [GenSpark](https://www.genspark.ai)
 - [MiniMax](https://agent.minimax.io/)
 - [OpenCode](https://github.com/anomalyco/opencode)
-- [OpenClaw](htyps://openclaw.ai)
+- [OpenClaw](https://openclaw.ai)
 
 ## Amarican LLM
 - [NotebookLM](https://notebooklm.google.com/)
