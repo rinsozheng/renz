@@ -24,6 +24,7 @@ daily memory
 - [Midjourney](https://www.midjourney.com/)
 - [Claude](https://claude.ai)
 - [Lovable](https://lovable.dev)
+- [Devv](https://devv.ai)
 
 ## Chinese LLM
 - [QianWen](https://www.tongyi.com/)
