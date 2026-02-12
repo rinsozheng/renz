@@ -27,6 +27,7 @@ daily memory
 - [Claude](https://claude.ai)
 - [Lovable](https://lovable.dev)
 - [Devv](https://devv.ai)
+- [Mistral](https://chat.mistral.ai)
 
 ## Chinese LLM
 - [QianWen](https://www.tongyi.com/)
