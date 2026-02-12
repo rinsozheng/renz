@@ -12,7 +12,7 @@ daily memory
 - [MetaGPT](https://mgx.dev)
 - [GenSpark](https://www.genspark.ai)
 - [MiniMax](https://agent.minimax.io/)
-- [Hailuo](https://hailuo.com)
+- [Hailuo](https://hailuoai.com)
 - [OpenCode](https://github.com/anomalyco/opencode)
 - [OpenClaw](https://openclaw.ai)
 
