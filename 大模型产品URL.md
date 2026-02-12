@@ -34,12 +34,15 @@ daily memory
 - [QianWen](https://www.tongyi.com/)
 - [DeepSeek](https://chat.deepseek.com)
 - [DouBao](https://www.doubao.com/)
+- [Coze](https://www.coze.cn)
 - [YuanBao](https://yuanbao.tencent.com)
+- [YuanQi](https://yuanqi.tencent.com)
 - [HunYuan](https://hunyuan.tencent.com/)
 - [Kimi](https://www.kimi.com)
 - [ChatGLM](https://chatglm.cn/)
 - [GLM](https://chat.z.ai)
 - [Monica](https://monica.cn/)
+- [Xiaoyi](https://xiaoyi.huawei.com/chat)
 
 ## HW
 - [MlOps](https://mlops.huawei.com)
