@@ -36,6 +36,7 @@ daily memory
 - [HunYuan](https://hunyuan.tencent.com/)
 - [Kimi](https://www.kimi.com)
 - [ChatGLM](https://chatglm.cn/)
+- [GLM](https://chat.z.ai)
 - [Monica](https://monica.cn/)
 
 ## HW
