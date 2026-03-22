@@ -49,3 +49,8 @@ daily memory
 - [DevMate](https://devmate.huawei.com)
 - [Asko3](https://asko3.o3community.huawei.com)
 - [FAE](http://faecopilot.rnd.huawei.com)
+
+## Skills
+- [Clawhub](https://clawhub.ai/)
+- [SkillsSH](https://skills.sh/)
+- [SkillsMP](https://skillsmp.com/)
