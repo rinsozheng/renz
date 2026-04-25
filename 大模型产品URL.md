@@ -38,7 +38,7 @@ daily memory
 - [YuanBao](https://yuanbao.tencent.com)
 - [YuanQi](https://yuanqi.tencent.com)
 - [YiYan](https://yiyan.baidu.com)
--[XingHuo](https://xinghuo.xfyun.cn)
+- [XingHuo](https://xinghuo.xfyun.cn)
 - [HunYuan](https://hunyuan.tencent.com/)
 - [Kimi](https://www.kimi.com)
 - [ChatGLM](https://chatglm.cn/)
