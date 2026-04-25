@@ -40,6 +40,7 @@ daily memory
 - [YiYan](https://yiyan.baidu.com)
 - [XingHuo](https://xinghuo.xfyun.cn)
 - [HunYuan](https://hunyuan.tencent.com/)
+- [LongCat](https://longcat.chat)
 - [Kimi](https://www.kimi.com)
 - [ChatGLM](https://chatglm.cn/)
 - [GLM](https://chat.z.ai)
