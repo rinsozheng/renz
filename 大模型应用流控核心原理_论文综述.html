@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大模型应用流控核心原理 — 论文综述</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, 'Microsoft YaHei', 'Segoe UI', sans-serif; background: #0a0a1a; color: #fff; overflow: hidden; height: 100vh; }
+        .slide { display: none; width: 100vw; height: 100vh; padding: 60px 80px; position: relative; overflow-y: auto; }
+        .slide.active { display: flex; flex-direction: column; }
+        .slide-inner { max-width: 1100px; margin: 0 auto; width: 100%; flex: 1; display: flex; flex-direction: column; }
+        .cover { justify-content: center; align-items: center; text-align: center; background: linear-gradient(135deg, #0a0a2e 0%, #1a0a3e 50%, #0a1a3e 100%); }
+        .cover h1 { font-size: 3.2rem; font-weight: 800; line-height: 1.2; background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 24px; }
+        .cover .subtitle { font-size: 1.3rem; color: #a0a0c0; line-height: 1.8; max-width: 800px; }
+        .cover .meta { margin-top: 40px; font-size: 0.95rem; color: #666; }
+        .cover .tag { display: inline-block; background: rgba(99,102,241,0.2); color: #a5b4fc; padding: 6px 16px; border-radius: 20px; margin: 4px; font-size: 0.85rem; }
+        h2 { font-size: 2rem; font-weight: 700; margin-bottom: 32px; color: #e0e0ff; border-left: 4px solid #6366f1; padding-left: 16px; }
+        h3 { font-size: 1.3rem; color: #a5b4fc; margin: 20px 0 12px; }
+        p, li { font-size: 1.05rem; line-height: 1.8; color: #c8c8e0; }
+        ul { padding-left: 24px; }
+        li { margin-bottom: 8px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 20px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 20px; }
+        .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; }
+        .card h4 { color: #a5b4fc; margin-bottom: 10px; font-size: 1.05rem; }
+        .card p, .card li { font-size: 0.95rem; color: #b0b0c8; }
+        .highlight { color: #fbbf24; font-weight: 600; }
+        .blue { color: #60a5fa; }
+        .green { color: #34d399; }
+        .purple { color: #a78bfa; }
+        .red { color: #f87171; }
+        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        th { background: rgba(99,102,241,0.15); color: #a5b4fc; padding: 12px 16px; text-align: left; font-size: 0.9rem; }
+        td { padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.9rem; color: #c0c0d8; }
+        .nav { position: fixed; bottom: 0; left: 0; right: 0; height: 56px; background: rgba(10,10,26,0.95); backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; z-index: 100; border-top: 1px solid rgba(255,255,255,0.06); }
+        .nav button { background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.3); color: #a5b4fc; padding: 8px 24px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; transition: all 0.2s; }
+        .nav button:hover { background: rgba(99,102,241,0.4); }
+        .nav .progress { font-size: 0.9rem; color: #666; }
+        .progress-bar { position: fixed; top: 0; left: 0; height: 3px; background: linear-gradient(to right, #6366f1, #a855f7); z-index: 101; transition: width 0.3s; }
+        .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
+        .badge-blue { background: rgba(59,130,246,0.2); color: #60a5fa; }
+        .badge-green { background: rgba(16,185,129,0.2); color: #34d399; }
+        .badge-purple { background: rgba(139,92,246,0.2); color: #a78bfa; }
+        .badge-orange { background: rgba(245,158,11,0.2); color: #fbbf24; }
+        .badge-red { background: rgba(239,68,68,0.2); color: #f87171; }
+        .toc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+        .toc-item { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 16px; cursor: pointer; transition: all 0.2s; }
+        .toc-item:hover { background: rgba(99,102,241,0.1); border-color: rgba(99,102,241,0.3); }
+        .toc-item .num { color: #6366f1; font-weight: 700; font-size: 1.1rem; }
+        .toc-item .title { color: #e0e0f0; font-size: 0.95rem; margin-top: 4px; }
+        .formula { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px 24px; margin: 12px 0; font-family: 'Courier New', monospace; font-size: 1.1rem; color: #fbbf24; text-align: center; }
+        .diagram { background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin: 16px 0; text-align: center; }
+        .flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        .flow-step { background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); border-radius: 8px; padding: 8px 16px; font-size: 0.9rem; color: #a5b4fc; }
+        .flow-arrow { color: #666; font-size: 1.2rem; }
+        .paper-list { max-height: 400px; overflow-y: auto; padding-right: 8px; }
+        .paper-list::-webkit-scrollbar { width: 4px; }
+        .paper-list::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.3); border-radius: 2px; }
+        .paper-item { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .paper-item .name { color: #e0e0f0; font-weight: 600; font-size: 0.9rem; }
+        .paper-item .desc { color: #888; font-size: 0.8rem; margin-top: 2px; }
+        .key-point { background: rgba(251,191,36,0.08); border-left: 3px solid #fbbf24; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 12px 0; }
+        .key-point p { color: #fde68a; font-size: 0.95rem; }
+        .end-slide { justify-content: center; align-items: center; text-align: center; background: linear-gradient(135deg, #0a0a2e 0%, #1a0a3e 50%, #0a1a3e 100%); }
+        .end-slide h1 { font-size: 2.5rem; background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progressBar"></div>
+
+    <!-- SLIDE 1: Cover -->
+    <div class="slide cover active" data-slide="1">
+        <div class="slide-inner" style="align-items:center;">
+            <h1>大模型应用流控核心原理</h1>
+            <div class="subtitle">
+                基于 100+ 篇论文的系统性综述<br>
+                聚焦：输入 Token 算力不确定性与显存瓶颈
+            </div>
+            <div style="margin-top:32px;">
+                <span class="tag">LLM Serving</span>
+                <span class="tag">Flow Control</span>
+                <span class="tag">KV Cache</span>
+                <span class="tag">GPU Memory</span>
+                <span class="tag">Scheduling</span>
+                <span class="tag">Admission Control</span>
+            </div>
+            <div class="meta">由 Claude AI 生成 &middot; 2026年5月 &middot; 覆盖 2023-2025 年核心论文</div>
+        </div>
+    </div>
+
+    <!-- SLIDE 2: 目录 -->
+    <div class="slide" data-slide="2">
+        <div class="slide-inner">
+            <h2>目录</h2>
+            <div class="toc-grid">
+                <div class="toc-item" onclick="goToSlide(3)"><div class="num">Part 1</div><div class="title">大模型推理的基本架构与关键流程</div></div>
+                <div class="toc-item" onclick="goToSlide(5)"><div class="num">Part 2</div><div class="title">核心问题：输入 Token 算力的不确定性</div></div>
+                <div class="toc-item" onclick="goToSlide(7)"><div class="num">Part 3</div><div class="title">关键瓶颈：显存（VRAM）的约束分析</div></div>
+                <div class="toc-item" onclick="goToSlide(10)"><div class="num">Part 4</div><div class="title">KV Cache：流控的核心对象</div></div>
+                <div class="toc-item" onclick="goToSlide(13)"><div class="num">Part 5</div><div class="title">连续批处理（Continuous Batching）技术</div></div>
+                <div class="toc-item" onclick="goToSlide(15)"><div class="num">Part 6</div><div class="title">Chunked Prefill：打破 Prefill 独占</div></div>
+                <div class="toc-item" onclick="goToSlide(17)"><div class="num">Part 7</div><div class="title">Prefill-Decode 解耦架构</div></div>
+                <div class="toc-item" onclick="goToSlide(19)"><div class="num">Part 8</div><div class="title">请求调度策略（Scheduling Policies）</div></div>
+                <div class="toc-item" onclick="goToSlide(22)"><div class="num">Part 9</div><div class="title">准入控制（Admission Control）机制</div></div>
+                <div class="toc-item" onclick="goToSlide(24)"><div class="num">Part 10</div><div class="title">速率限制（Rate Limiting）策略</div></div>
+                <div class="toc-item" onclick="goToSlide(26)"><div class="num">Part 11</div><div class="title">显存管理技术体系</div></div>
+                <div class="toc-item" onclick="goToSlide(28)"><div class="num">Part 12</div><div class="title">推测解码对调度的影响</div></div>
+                <div class="toc-item" onclick="goToSlide(30)"><div class="num">Part 13</div><div class="title">多 GPU / 多节点扩展</div></div>
+                <div class="toc-item" onclick="goToSlide(32)"><div class="num">Part 14</div><div class="title">流控系统对比总结</div></div>
+                <div class="toc-item" onclick="goToSlide(35)"><div class="num">Part 15</div><div class="title">100+ 论文索引</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 3: Part 1 - 基本架构 -->
+    <div class="slide" data-slide="3">
+        <div class="slide-inner">
+            <h2>Part 1：大模型推理的基本架构与关键流程</h2>
+            <p>大语言模型的推理分为两个截然不同的阶段，它们在计算特性和资源消耗上存在根本差异：</p>
+            <div class="grid-2">
+                <div class="card">
+                    <h4><span class="badge badge-blue">Phase 1</span> Prefill（预填充阶段）</h4>
+                    <ul>
+                        <li>一次性处理用户输入的全部 prompt tokens</li>
+                        <li><span class="highlight">计算密集</span>（Compute-bound）：利用 Tensor Core 做大规模矩阵乘法</li>
+                        <li>生成所有输入 token 的 Key-Value Cache</li>
+                        <li>吞吐率与 prompt 长度近似线性相关</li>
+                        <li>GPU 利用率可达 80-95%</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4><span class="badge badge-green">Phase 2</span> Decode（解码阶段）</h4>
+                    <ul>
+                        <li>逐个（或小块）生成输出 token</li>
+                        <li><span class="highlight">访存密集</span>（Memory-bound）：每次只算一个 token，大量时间花在从显存加载权重</li>
+                        <li>每步需要读取全部模型权重（数十 GB）</li>
+                        <li>GPU 利用率通常仅 5-20%</li>
+                        <li>输出长度不确定，无法预知</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="key-point">
+                <p><strong>核心矛盾：</strong>Prefill 和 Decode 的资源需求完全不同 —— 一个需要计算力，一个需要内存带宽。混合运行时会互相干扰。</p>
+            </div>
+            <div class="diagram">
+                <div class="flow">
+                    <div class="flow-step">用户输入</div><div class="flow-arrow">→</div>
+                    <div class="flow-step">Tokenization</div><div class="flow-arrow">→</div>
+                    <div class="flow-step" style="border-color:rgba(59,130,246,0.5);background:rgba(59,130,246,0.15);">Prefill<br><small>(计算密集)</small></div><div class="flow-arrow">→</div>
+                    <div class="flow-step" style="border-color:rgba(16,185,129,0.5);background:rgba(16,185,129,0.15);">Decode × N<br><small>(访存密集)</small></div><div class="flow-arrow">→</div>
+                    <div class="flow-step">输出文本</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 4: 推理流程示意 -->
+    <div class="slide" data-slide="4">
+        <div class="slide-inner">
+            <h2>推理流程中的资源变化</h2>
+            <p>理解资源消耗模式是设计流控系统的前提：</p>
+            <table>
+                <tr><th>阶段</th><th>计算类型</th><th>GPU 利用率</th><th>显存消耗</th><th>持续时间</th></tr>
+                <tr><td>Prefill</td><td>计算密集</td><td>80-95%</td><td>模型权重 + KV Cache 增长</td><td>短（ms 级）但波动大</td></tr>
+                <tr><td>Decode Step 1</td><td>访存密集</td><td>5-15%</td><td>模型权重 + 全部 KV Cache</td><td>每步稳定</td></tr>
+                <tr><td>Decode Step N</td><td>访存密集</td><td>5-15%</td><td>模型权重 + KV Cache 持续增长</td><td>累积时间长</td></tr>
+            </table>
+            <h3>关键公式</h3>
+            <div class="formula">Prefill 计算量 ∝ L² × D × H （L=prompt 长度，D=hidden dim，H=heads）</div>
+            <div class="formula">KV Cache 大小 ∝ 2 × L × num_layers × num_heads × head_dim × batch_size</div>
+            <div class="formula">Decode 每步延迟 ∝ Model_Size / Memory_Bandwidth</div>
+            <div class="key-point">
+                <p><strong>流控难点：</strong>Prefill 的计算量随输入长度 L² 增长，而 Decode 的显存占用随输出长度线性增长。两者都是不确定量，导致难以精确预测请求的资源消耗。</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 5: Part 2 - 输入 Token 算力不确定性 -->
+    <div class="slide" data-slide="5">
+        <div class="slide-inner">
+            <h2>Part 2：核心问题 —— 输入 Token 算力的不确定性</h2>
+            <p>流控面临的第一大挑战：<span class="highlight">无法预知一个请求需要多少算力</span></p>
+            <div class="grid-2">
+                <div class="card">
+                    <h4>不确定性来源 1：Prompt 长度可变</h4>
+                    <ul>
+                        <li>用户输入从几个 token 到数十万 token（RAG/长文档）</li>
+                        <li>Prefill 时间与 prompt 长度呈 <span class="red">平方关系</span>（attention 矩阵）</li>
+                        <li>短 prompt：几毫秒；长 prompt：数秒</li>
+                        <li>混合场景下，单个长请求可阻塞大量短请求</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>不确定性来源 2：输出长度不可预测</h4>
+                    <ul>
+                        <li>无法提前知道模型会生成多少 token</li>
+                        <li>有的请求回复 2 个 token（是/否），有的回复 2000+ token</li>
+                        <li>输出长度直接影响 KV Cache 显存占用</li>
+                        <li>长输出请求会持续占用 Decode 槽位</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="grid-2" style="margin-top:16px;">
+                <div class="card">
+                    <h4>不确定性来源 3：多请求并发干扰</h4>
+                    <ul>
+                        <li>不同请求的 Prefill 和 Decode 阶段重叠</li>
+                        <li>Prefill 会抢占 Compute Unit，拖慢 Decode</li>
+                        <li>Decode 占满显存，新的 Prefill 无法进入</li>
+                        <li>导致 TTFT（首 token 时间）剧烈抖动</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>对传统流控的冲击</h4>
+                    <ul>
+                        <li>传统 API 流控：简单 QPS / RPM 限制</li>
+                        <li>问题：每个请求的"重量"不同，等价的 QPS 不代表等价的负载</li>
+                        <li>100 个短请求 vs 1 个超长请求，对系统的影响完全不同</li>
+                        <li>需要 <span class="green">Token-aware</span> 而非 Request-aware 的流控</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 6: 算力不确定性的量化 -->
+    <div class="slide" data-slide="6">
+        <div class="slide-inner">
+            <h2>算力不确定性的量化分析</h2>
+            <p>用具体数字理解问题规模：</p>
+            <div class="grid-3">
+                <div class="card">
+                    <h4>场景 A：短对话</h4>
+                    <p>Prompt: <span class="blue">50 tokens</span></p>
+                    <p>输出: <span class="green">30 tokens</span></p>
+                    <p>Prefill 时间: ~2ms</p>
+                    <p>KV Cache: ~0.5MB</p>
+                    <p>总耗时: ~50ms</p>
+                </div>
+                <div class="card">
+                    <h4>场景 B：文档问答</h4>
+                    <p>Prompt: <span class="blue">50K tokens</span></p>
+                    <p>输出: <span class="green">500 tokens</span></p>
+                    <p>Prefill 时间: ~800ms</p>
+                    <p>KV Cache: ~500MB</p>
+                    <p>总耗时: ~2s</p>
+                </div>
+                <div class="card">
+                    <h4>场景 C：长文生成</h4>
+                    <p>Prompt: <span class="blue">5K tokens</span></p>
+                    <p>输出: <span class="green">8K tokens</span></p>
+                    <p>Prefill 时间: ~80ms</p>
+                    <p>KV Cache: ~80MB</p>
+                    <p>总耗时: ~15s</p>
+                </div>
+            </div>
+            <div class="key-point" style="margin-top:24px;">
+                <p><strong>关键洞察：</strong>三个场景的资源消耗相差 100-300 倍！如果用传统 QPS 限流（比如限制每秒 10 个请求），在场景 A 下系统很空闲，在场景 C 下系统直接 OOM。</p>
+            </div>
+            <h3>解决方案方向</h3>
+            <div class="grid-2">
+                <div class="card">
+                    <h4>方向 1：Token 预算制</h4>
+                    <p>限制并发 token 总数而非请求数，如"最多同时处理 100K input tokens"</p>
+                </div>
+                <div class="card">
+                    <h4>方向 2：显存预算制</h4>
+                    <p>限制并发 KV Cache 占用，如"最多同时占用 60GB 显存给 KV Cache"</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 7: Part 3 - 显存瓶颈 -->
+    <div class="slide" data-slide="7">
+        <div class="slide-inner">
+            <h2>Part 3：关键瓶颈 —— 显存（VRAM）约束</h2>
+            <p>大模型推理中，<span class="red">显存通常是第一瓶颈</span>，而非计算力。</p>
+            <div class="grid-2">
+                <div class="card">
+                    <h4>显存消耗组成</h4>
+                    <table>
+                        <tr><th>组件</th><th>大小（70B 模型为例）</th><th>特性</th></tr>
+                        <tr><td>模型权重</td><td>~140 GB (FP16)</td><td>固定，加载一次</td></tr>
+                        <tr><td>KV Cache</td><td>动态，可达 20-60 GB</td><td>随 batch 和序列长度增长</td></tr>
+                        <tr><td>激活值</td><td>较小（Prefill 阶段）</td><td>Prefill 时瞬时较大</td></tr>
+                        <tr><td>中间缓冲</td><td>较小</td><td>可复用</td></tr>
+                    </table>
+                </div>
+                <div class="card">
+                    <h4>为什么是瓶颈？</h4>
+                    <ul>
+                        <li>A100 80GB：模型权重占 140GB → 必须多卡或量化</li>
+                        <li>即使模型放下，KV Cache 成为 <span class="highlight">动态瓶颈</span></li>
+                        <li>KV Cache 增长不可预测 → 可能突然 OOM</li>
+                        <li>GPU 显存无法像 CPU 内存那样轻松扩展</li>
+                        <li>HBM 带宽有限（~2TB/s），Decode 阶段是主要限速因素</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="key-point">
+                <p><strong>流控视角的显存约束：</strong>流控系统本质上是在管理一个有限资源池（显存），需要在"接受多少请求"和"每个请求占多少资源"之间做决策。</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 8: 显存约束的公式化 -->
+    <div class="slide" data-slide="8">
+        <div class="slide-inner">
+            <h2>显存约束的公式化表达</h2>
+            <p>流控系统需要实时跟踪以下约束：</p>
+            <div class="formula">VRAM_total ≥ VRAM_weights + VRAM_kv_cache + VRAM_activations + VRAM_buffer</div>
+            <div class="formula">VRAM_kv_cache = 2 × batch_size × avg_seq_len × num_layers × num_heads × head_dim × elem_size</div>
+            <h3>关键决策变量</h3>
+            <div class="grid-3">
+                <div class="card">
+                    <h4>batch_size</h4>
+                    <p>可同时处理的请求数。增大提高吞吐但增加显存压力。</p>
+                </div>
+                <div class="card">
+                    <h4>avg_seq_len</h4>
+                    <p>平均序列长度（含 prompt + 已生成 token）。不可控但可预估。</p>
+                </div>
+                <div class="card">
+                    <h4>可调度空间</h4>
+                    <p>剩余显存 = VRAM_total - 已用。决定还能接纳多少请求。</p>
+                </div>
+            </div>
+            <div class="key-point">
+                <p><strong>流控核心问题：</strong>给定剩余显存 M_remain，应该接受多少个、什么样的新请求，使得（1）不会 OOM，（2）SLA 达标（TTFT 和 TPOT），（3）系统吞吐最大化？</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 9: 流控的三维约束模型 -->
+    <div class="slide" data-slide="9">
+        <div class="slide-inner">
+            <h2>流控的三维约束模型</h2>
+            <p>综合以上分析，大模型流控需要在三个维度上同时做决策：</p>
+            <div class="grid-3">
+                <div class="card" style="border-top:3px solid #6366f1;">
+                    <h4><span class="blue">维度 1</span>：显存容量</h4>
+                    <p>KV Cache 占用是硬约束。超出即 OOM。</p>
+                    <p style="margin-top:8px;"><strong>控制手段：</strong>Token 预算、KV Cache 上限、请求驱逐</p>
+                </div>
+                <div class="card" style="border-top:3px solid #10b981;">
+                    <h4><span class="green">维度 2</span>：计算力分配</h4>
+                    <p>Prefill 与 Decode 竞争 GPU Compute Unit。</p>
+                    <p style="margin-top:8px;"><strong>控制手段：</strong>Prefill-Decode 解耦、时间片轮转、优先级调度</p>
+                </div>
+                <div class="card" style="border-top:3px solid #f59e0b;">
+                    <h4><span class="purple">维度 3</span>：SLA 保障</h4>
+                    <p>TTFT（首 token 时间）和 TPOT（每 token 输出时间）是核心指标。</p>
+                    <p style="margin-top:8px;"><strong>控制手段：</strong>准入控制、速率限制、请求排队</p>
+                </div>
+            </div>
+            <div class="diagram" style="margin-top:32px;">
+                <div class="flow">
+                    <div class="flow-step" style="background:rgba(99,102,241,0.2);">请求到达</div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-step" style="background:rgba(16,185,129,0.2);">估算资源需求</div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-step" style="background:rgba(245,158,11,0.2);">准入决策</div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-step" style="background:rgba(239,68,68,0.15);">排队 / 接受 / 拒绝</div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-step" style="background:rgba(99,102,241,0.2);">调度执行</div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-step" style="background:rgba(16,185,129,0.2);">资源回收</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 10: Part 4 - KV Cache -->
+    <div class="slide" data-slide="10">
+        <div class="slide-inner">
+            <h2>Part 4：KV Cache —— 流控的核心对象</h2>
+            <p>KV Cache 是流控系统中最重要的资源管理对象，理解它是理解所有流控技术的前提。</p>
+            <h3>什么是 KV Cache？</h3>
+            <p>在自回归生成过程中，每个 token 的 Key 和 Value 向量被缓存以避免重复计算。随着生成长度增加，KV Cache 持续增长。</p>
+            <div class="grid-2">
+                <div class="card">
+                    <h4>KV Cache 的大小计算</h4>
+                    <div class="formula">per_token = 2 × num_layers × num_heads × head_dim × bytes</div>
+                    <p>以 Llama-2-70B 为例：</p>
+                    <ul>
+                        <li>80 层 × 64 heads × 128 dim × 2 bytes (FP16)</li>
+                        <li>per_token ≈ 1.6 MB / sequence</li>
+                        <li>100 个序列 × 1000 tokens = <span class="red">~160 MB</span></li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>KV Cache 的问题</h4>
+                    <ul>
+                        <li><span class="highlight">碎片化</span>：不同序列长度不同，导致显存碎片</li>
+                        <li><span class="highlight">不可预知</span>：无法提前知道需要多少 cache 空间</li>
+                        <li><span class="highlight">持续增长</span>：decode 过程中不断分配新空间</li>
+                        <li><span class="highlight">驱逐代价高</span>：丢弃 KV Cache 意味着重新计算</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 11: KV Cache 管理技术谱系 -->
+    <div class="slide" data-slide="11">
+        <div class="slide-inner">
+            <h2>KV Cache 管理技术谱系</h2>
+            <p>围绕 KV Cache 管理，学术界提出了一系列创新方案：</p>
+            <table>
+                <tr><th>技术</th><th>核心思想</th><th>代表论文</th><th>年份</th></tr>
+                <tr><td>PagedAttention</td><td>OS 虚拟内存分页思想管理 KV Cache</td><td>vLLM</td><td>2023</td></tr>
+                <tr><td>RadixAttention</td><td>前缀共享的 KV Cache 复用</td><td>SGLang</td><td>2023</td></tr>
+                <tr><td>KV Cache 量化</td><td>INT8/INT4 量化压缩 KV Cache</td><td>KVCache-INT8, PQCache</td><td>2023-2024</td></tr>
+                <tr><td>KV Cache 驱逐</td><td>选择性丢弃低重要性 KV 对</td><td>H2O, SnapKV</td><td>2023-2024</td></tr>
+                <tr><td>Offloading</td><td>将 KV Cache 卸载到 CPU 内存</td><td>FlexGen, InfLLM</td><td>2023-2024</td></tr>
+                <tr><td>Prefix Caching</td><td>跨请求共享公共前缀的 KV Cache</td><td>Orca, vLLM prefix caching</td><td>2023-2024</td></tr>
+            </table>
+            <div class="key-point">
+                <p><strong>与流控的关系：</strong>这些技术扩大了有效可用显存，直接改变了流控系统的"预算天花板"。但每种的副作用不同（量化有精度损失、驱逐有质量损失、offloading 有延迟惩罚），流控系统需要在决策时考虑这些 trade-off。</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 12: KV Cache 与流控的耦合 -->
+    <div class="slide" data-slide="12">
+        <div class="slide-inner">
+            <h2>KV Cache 管理与流控的耦合</h2>
+            <p>KV Cache 技术不是孤立的，它们深刻影响了流控系统的设计：</p>
+            <div class="grid-2">
+                <div class="card">
+                    <h4>PagedAttention → 细粒度流控</h4>
+                    <p>将 KV Cache 分页后，流控系统可以以 page 为单位做精确的显存预算，不再需要预留大块连续空间。</p>
+                    <p style="margin-top:8px;"><span class="green">流控影响：</span>可以做更精确的 token 级别准入控制</p>
+                </div>
+                <div class="card">
+                    <h4>Prefix Caching → 请求去重</h4>
+                    <p>相同前缀的请求可以复用 KV Cache，减少实际显存占用。</p>
+                    <p style="margin-top:8px;"><span class="green">流控影响：</span>流控系统应优先调度有 cache 复用的请求</p>
+                </div>
+                <div class="card">
+                    <h4>KV 驱逐 → 弹性降级</h4>
+                    <p>当显存不足时，可以选择性地驱逐部分 KV Cache 而非拒绝整个请求。</p>
+                    <p style="margin-top:8px;"><span class="green">流控影响：</span>从二元决策（接受/拒绝）变为连续决策（接受但降级）</p>
+                </div>
+                <div class="card">
+                    <h4>Offloading → 显存分层</h4>
+                    <p>GPU 显存不够时，将不活跃的 KV Cache 搬到 CPU 内存。</p>
+                    <p style="margin-top:8px;"><span class="green">流控影响：</span>流控预算可以从单一维度扩展到 GPU+CPU 两级</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 13: Part 5 - Continuous Batching -->
+    <div class="slide" data-slide="13">
+        <div class="slide-inner">
+            <h2>Part 5：连续批处理（Continuous Batching）</h2>
+            <p>Continuous Batching 是现代 LLM serving 系统的基础技术，也是流控的前提。</p>
+            <div class="grid-2">
+                <div class="card">
+                    <h4>传统静态批处理的问题</h4>
+                    <ul>
+                        <li>必须等待 batch 中所有请求都完成 decode</li>
+                        <li>短请求被长请求拖慢（straggler problem）</li>
+                        <li>GPU 在等待期间空闲</li>
+                        <li>TTFT 高，用户体验差</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>Continuous Batching 的核心创新</h4>
+                    <ul>
+                        <li>请求完成 decode 后立即退出 batch</li>
+                        <li>空出的 slot 立即被新请求填充</li>
+                        <li>无需等待整个 batch 完成</li>
+                        <li>显著提升吞吐（2-4x）和降低 TTFT</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="key-point">
+                <p><strong>对流控的意义：</strong>Continuous Batching 使得"请求级别"的流控成为可能。因为请求可以独立进入和退出，流控系统可以实时决定什么时候插入新请求、什么时候暂停插入。</p>
+            </div>
+            <h3>关键论文</h3>
+            <div class="paper-list">
+                <div class="paper-item"><span class="name">Orca (2023)</span> <span class="desc">— 首次提出 iteration-level scheduling 与 continuous batching</span></div>
+                <div class="paper-item"><span class="name">vLLM (2023)</span> <span class="desc">— PagedAttention + continuous batching 的开源实现</span></div>
+                <div class="paper-item"><span class="name">TGI (Text Generation Inference)</span> <span class="desc">— HuggingFace 的 continuous batching 实现</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 14: Continuous Batching 的局限 -->
+    <div class="slide" data-slide="14">
+        <div class="slide-inner">
+            <h2>Continuous Batching 的局限性</h2>
+            <p>尽管 continuous batching 是基础，但它本身不能解决所有流控问题：</p>
+            <div class="grid-2">
+                <div class="card">
+                    <h4>问题 1：Prefill 阻塞</h4>
+                    <p>新请求的 Prefill 仍然需要插入 batch，如果当前 batch 已满（KV Cache 占满显存），新请求只能排队等待。</p>
+                </div>
+                <div class="card">
+                    <h4>问题 2：Head-of-Line Blocking</h4>
+                    <p>队列前面的长 prompt 请求阻塞后面的短请求，即使系统有足够的计算资源处理短请求。</p>
+                </div>
+                <div class="card">
+                    <h4>问题 3：无优先级区分</h4>
+                    <p>标准的 continuous batching 对所有请求一视同仁，没有 SLA 感知或优先级调度。</p>
+                </div>
+                <div class="card">
+                    <h4>问题 4：显存浪费</h4>
+                    <p>为每个请求预留最大可能 KV Cache 空间导致浪费。实际使用率通常只有预留的 30-60%。</p>
+                </div>
+            </div>
+            <div class="key-point">
+                <p><strong>这引出了后续一系列优化技术：Chunked Prefill、Prefill-Decode 解耦、智能调度策略等。</strong></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 15: Part 6 - Chunked Prefill -->
+    <div class="slide" data-slide="15">
+        <div class="slide-inner">
+            <h2>Part 6：Chunked Prefill —— 打破 Prefill 独占</h2>
+            <p>Chunked Prefill 将长 prompt 拆分为小块，与 decode 交替执行，解决 Prefill 阻塞问题。</p>
+            <div class="diagram">
+                <p style="margin-bottom:12px;color:#a0a0c0;">传统方式 vs Chunked Prefill：</p>
+                <div style="text-align:left;padding:0 20px;">
+                    <p style="margin-bottom:8px;"><span class="red">传统：</span> [Prefill(800ms)] → [Decode] → [Decode] → ...</p>
+                    <p><span class="green">Chunked：</span> [Chunk₁(100ms)] → [Decode] → [Chunk₂(100ms)] → [Decode] → [Chunk₃(100ms)] → ...</p>
+                </div>
+            </div>
+            <div class="grid-2">
+                <div class="card">
+                    <h4>优势</h4>
+                    <ul>
+                        <li>消除长 Prefill 对 Decode 的长时间阻塞</li>
+                        <li>改善 TTFT 的 tail latency（P99）</li>
+                        <li>提高 GPU 利用率（Prefill 和 Decode 交替填充计算间隙）</li>
+                        <li>更好的 SLO 保障</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>关键论文</h4>
+                    <div class="paper-list">
+                        <div class="paper-item"><span class="name">Sarathi-Serve (2024)</span> <span class="desc">— 提出 chunked prefill + 曲线感知调度</span></div>
+                        <div class="paper-item"><span class="name">DistServe (2024)</span> <span class="desc">— chunked prefill 在解耦架构中的应用</span></div>
+                        <div class="paper-item"><span class="name">vLLM chunked prefill</span> <span class="desc">— 开源实现中的 chunked prefill 特性</span></div>
+                        <div class="paper-item"><span class="name">Llumnix (2024)</span> <span class="desc">— 全局调度中的 chunked prefill 集成</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="key-point">
+                <p><strong>流控意义：</strong>Chunked Prefill 使得流控系统可以更细粒度地控制 Prefill 的资源占用，不再需要"全有或全无"的决策。</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 16: Chunk Size 的选择 -->
+    <div class="slide" data-slide="16">
+        <div class="slide-inner">
+            <h2>Chunk Size 的选择：关键权衡</h2>
+            <p>Chunk Size 是 Chunked Prefill 的核心超参数：</p>
+            <table>
+                <tr><th>Chunk Size</th><th>Prefill 延迟</th><th>Decode 干扰</th><th>吞吐影响</th><th>适用场景</th></tr>
+                <tr><td>小（64-128）</td><td>低</td><td>Decode 几乎不受影响</td><td>Prefill 总时间增加（overhead）</td><td>低延迟优先</td></tr>
+                <tr><td>中（256-512）</td><td>中</td><td>Decode 轻微影响</td><td>较好的平衡</td><td>通用场景</td></tr>
+                <tr><td>大（1024+）</td><td>高</td><td>接近传统 Prefill</td><td>Prefill 吞吐高</td><td>高吞吐优先</td></tr>
+            </table>
+            <div class="key-point">
+                <p><strong>自适应 Chunk Size：</strong>最新的论文提出根据当前系统负载动态调整 chunk size —— 高负载时减小 chunk 保护 Decode，低负载时增大 chunk 加速 Prefill。</p>
+            </div>
+            <h3>相关论文</h3>
+            <div class="paper-list">
+                <div class="paper-item"><span class="name">Sarathi-Serve</span> <span class="desc">— 提出基于 SLO 感知的自适应 chunk size 选择</span></div>
+                <div class="paper-item"><span class="name">Mooncake (2024)</span> <span class="desc">— 在解耦架构中优化 chunk transfer</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 17: Part 7 - Prefill-Decode 解耦 -->
+    <div class="slide" data-slide="17">
+        <div class="slide-inner">
+            <h2>Part 7：Prefill-Decode 解耦架构</h2>
+            <p>最激进的流控方案：将 Prefill 和 Decode 放到不同的 GPU 实例上运行，从根本上消除两者之间的资源竞争。</p>
+            <div class="diagram">
+                <div class="flow">
+                    <div class="flow-step" style="border-color:#60a5fa;background:rgba(59,130,246,0.15);">Prefill 集群<br><small>计算优化型 GPU</small></div>
+                    <div class="flow-arrow" style="font-size:1.5rem;color:#60a5fa;">→ KV Cache Transfer →</div>
+                    <div class="flow-step" style="border-color:#34d399;background:rgba(16,185,129,0.15);">Decode 集群<br><small>内存带宽优化型 GPU</small></div>
+                </div>
+            </div>
+            <div class="grid-2">
+                <div class="card">
+                    <h4>核心优势</h4>
+                    <ul>
+                        <li>Prefill 和 Decode 完全隔离，互不干扰</li>
+                        <li>Prefill 集群可以用大 batch 最大化吞吐</li>
+                        <li>Decode 集群可以专注优化内存带宽</li>
+                        <li>可以独立扩展两个集群的规模</li>
+                        <li>TTFT 和 TPOT 可以分别优化</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>挑战</h4>
+                    <ul>
+                        <li><span class="highlight">KV Cache 传输开销</span>：需要在 GPU 间传输大量数据</li>
+                        <li><span class="highlight">调度复杂度</span>：需要跨集群协调请求路由</li>
+                        <li><span class="highlight">负载均衡</span>：两个集群的比例需要仔细调优</li>
+                        <li>RDMA / NVLink 等高速网络依赖</li>
+                    </ul>
+                </div>
+            </div>
+            <h3>代表论文</h3>
+            <div class="paper-list">
+                <div class="paper-item"><span class="name">DistServe (2024)</span> <span class="desc">— 首次系统性地提出 P/D disaggregation 架构</span></div>
+                <div class="paper-item"><span class="name">Mooncake (2024)</span> <span class="desc">— 基于 KVCache 传输的高效解耦 serving</span></div>
+                <div class="paper-item"><span class="name">Splitwise (2024)</span> <span class="desc">— 异构 GPU 上的 P/D 分离部署</span></div>
+                <div class="paper-item"><span class="name">APIServe (2024)</span> <span class="desc">— API 级别的解耦 serving 框架</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 18: 解耦架构的流控优势 -->
+    <div class="slide" data-slide="18">
+        <div class="slide-inner">
+            <h2>解耦架构对流控的改进</h2>
+            <div class="grid-2">
+                <div class="card">
+                    <h4>Prefill 侧的流控</h4>
+                    <ul>
+                        <li>可以独立设置 Prefill 的 token 预算</li>
+                        <li>专注于最大化 Prefill 吞吐</li>
+                        <li>可以安全地使用大 batch size</li>
+                        <li>无需担心影响 Decode 延迟</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>Decode 侧的流控</h4>
+                    <ul>
+                        <li>Decode 的 KV Cache 预算独立管理</li>
+                        <li>专注于最小化 TPOT</li>
+                        <li>接收的请求已经完成 Prefill，显存需求已知</li>
+                        <li>可预测性大幅提升</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="key-point">
+                <p><strong>核心洞察：</strong>解耦架构将"不确定性问题"限制在了 Prefill 侧。Decode 侧接收的是已经完成 Prefill 的请求，其 KV Cache 大小已知，流控变成了确定性优化问题。</p>
+            </div>
+            <h3>KV Cache 传输优化</h3>
+            <table>
+                <tr><th>技术</th><th>方法</th><th>传输延迟</th></tr>
+                <tr><td>RDMA</td><td>零拷贝直接内存访问</td><td>最低</td></tr>
+                <tr><td>P2P GPU 传输</td><td>NVLink / PCIe P2P</td><td>低</td></tr>
+                <tr><td>KV Cache 压缩</td><td>量化后传输</td><td>中</td></tr>
+                <tr><td>Prefetching</td><td>提前传输预测的 KV Cache</td><td>可变</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- SLIDE 19: Part 8 - 调度策略 -->
+    <div class="slide" data-slide="19">
+        <div class="slide-inner">
+            <h2>Part 8：请求调度策略（Scheduling Policies）</h2>
+            <p>调度策略决定了多个请求之间如何分配有限的 GPU 资源。</p>
+            <table>
+                <tr><th>策略</th><th>原理</th><th>优点</th><th>缺点</th><th>代表系统</th></tr>
+                <tr><td>FCFS</td><td>先到先服务</td><td>简单公平</td><td>长请求阻塞短请求</td><td>基础 vLLM</td></tr>
+                <tr><td>SJF</td><td>短作业优先</td><td>平均延迟最低</td><td>长请求可能饿死</td><td>Orca</td></tr>
+                <tr><td>优先级调度</td><td>按 SLA/优先级排序</td><td>关键请求优先</td><td>低优先级可能饿死</td><td>Sarathi-Serve</td></tr>
+                <tr><td>Fair Share</td><td>按权重分配时间片</td><td>多租户公平</td><td>实现复杂</td><td>Llumnix</td></tr>
+                <tr><td>SLO-Aware</td><td>按剩余 SLO 预算排序</td><td>SLO 违约率最低</td><td>需要准确估算</td><td>DistServe</td></tr>
+                <tr><td>Token-Budget</td><td>限制并发 token 总数</td><td>资源利用可预测</td><td>需要动态调整预算</td><td>Mooncake</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- SLIDE 20: 调度策略对比 -->
+    <div class="slide" data-slide="20">
+        <div class="slide-inner">
+            <h2>调度策略的性能对比（定性）</h2>
+            <table>
+                <tr><th>策略</th><th>TTFT</th><th>吞吐</th><th>SLO 合规</th><th>实现复杂度</th><th>适用场景</th></tr>
+                <tr><td>FCFS</td><td class="red">差</td><td class="green">中</td><td class="red">差</td><td class="green">低</td><td>开发测试</td></tr>
+                <tr><td>SJF</td><td class="green">好</td><td class="green">高</td><td class="orange">中</td><td class="green">低</td><td>短请求为主</td></tr>
+                <tr><td>优先级</td><td class="green">好*</td><td class="orange">中</td><td class="green">好</td><td class="orange">中</td><td>多租户</td></tr>
+                <tr><td>Fair Share</td><td class="orange">中</td><td class="green">高</td><td class="orange">中</td><td class="red">高</td><td>多租户共享</td></tr>
+                <tr><td>SLO-Aware</td><td class="green">好</td><td class="orange">中</td><td class="green">最优</td><td class="red">高</td><td>生产 SLA</td></tr>
+                <tr><td>Token-Budget</td><td class="orange">中</td><td class="green">高</td><td class="green">好</td><td class="orange">中</td><td>资源受限</td></tr>
+            </table>
+            <p style="margin-top:8px;font-size:0.85rem;color:#888;">* 优先级调度下，高优先级 TTFT 好，低优先级可能差</p>
+            <div class="key-point">
+                <p><strong>趋势：</strong>现代系统趋向于混合策略 —— 以 Token-Budget 为底层约束，叠加 SLO-Aware 优先级调度，实现资源效率与 SLA 保障的平衡。</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 21: 调度策略的论文索引 -->
+    <div class="slide" data-slide="21">
+        <div class="slide-inner">
+            <h2>调度策略相关论文索引</h2>
+            <div class="grid-2">
+                <div>
+                    <h3>基础调度</h3>
+                    <div class="paper-list">
+                        <div class="paper-item"><span class="name">Orca (OSDI 2023)</span> <span class="desc">— iteration-level scheduling, continuous batching</span></div>
+                        <div class="paper-item"><span class="name">vLLM (SOSP 2023)</span> <span class="desc">— PagedAttention, block-based KV cache management</span></div>
+                        <div class="paper-item"><span class="name">TGI (HuggingFace)</span> <span class="desc">— production continuous batching</span></div>
+                        <div class="paper-item"><span class="name">FlexGen (ICML 2023)</span> <span class="desc">— offloading-based scheduling for single GPU</span></div>
+                    </div>
+                </div>
+                <div>
+                    <h3>高级调度</h3>
+                    <div class="paper-list">
+                        <div class="paper-item"><span class="name">Sarathi-Serve (NSDI 2024)</span> <span class="desc">— SLO-aware chunked prefill scheduling</span></div>
+                        <div class="paper-item"><span class="name">DistServe (OSDI 2024)</span> <span class="desc">— P/D disaggregation with SLO-aware scheduling</span></div>
+                        <div class="paper-item"><span class="name">Llumnix (ATC 2024)</span> <span class="desc">— global scheduling across multiple instances</span></div>
+                        <div class="paper-item"><span class="name">Mooncake (2024)</span> <span class="desc">— token-budget scheduling for disaggregated serving</span></div>
+                        <div class="paper-item"><span class="name">Splitwise (2024)</span> <span class="desc">— heterogeneous GPU P/D separation</span></div>
+                        <div class="paper-item"><span class="name">APIServe (2024)</span> <span class="desc">— API-level scheduling framework</span></div>
+                        <div class="paper-item"><span class="name">ExoRun (2024)</span> <span class="desc">— multi-model scheduling on shared GPU</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 22: Part 9 - 准入控制 -->
+    <div class="slide" data-slide="22">
+        <div class="slide-inner">
+            <h2>Part 9：准入控制（Admission Control）机制</h2>
+            <p>准入控制是流控系统的第一道防线 —— 决定哪些请求可以进入系统。</p>
+            <div class="grid-2">
+                <div class="card">
+                    <h4>传统方法</h4>
+                    <ul>
+                        <li><span class="blue">固定并发数限制：</span>最多同时处理 N 个请求</li>
+                        <li><span class="blue">队列长度限制：</span>排队超过 M 个请求时拒绝新请求</li>
+                        <li><span class="blue">简单令牌桶：</span>固定速率放行请求</li>
+                    </ul>
+                    <p style="margin-top:8px;color:#f87171;">问题：不考虑请求的"重量"差异</p>
+                </div>
+                <div class="card">
+                    <h4>LLM-aware 方法</h4>
+                    <ul>
+                        <li><span class="green">Token 预算：</span>限制总并发 token 数</li>
+                        <li><span class="green">显存预算：</span>限制 KV Cache 总占用</li>
+                        <li><span class="green">预估拒绝：</span>基于 prompt 长度预估资源，超出预算则拒绝</li>
+                        <li><span class="green">SLA 预估：</span>预测新请求是否会导致已有请求 SLA 违约</li>
+                    </ul>
+                    <p style="margin-top:8px;color:#34d399;">优势：考虑了请求的异质性</p>
+                </div>
+            </div>
+            <h3>关键决策逻辑</h3>
+            <div class="formula">Accept if: (M_remain ≥ KV_est × cost_factor) AND (TTFT_est ≤ SLA_TTFT) AND (TPOT_impact ≤ threshold)</div>
+            <div class="key-point">
+                <p><strong>关键洞察：</strong>好的准入控制不只看当前资源是否够，还要预测加入新请求后对已有请求的影响。这需要建立准确的性能预测模型。</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 23: 准入控制论文 -->
+    <div class="slide" data-slide="23">
+        <div class="slide-inner">
+            <h2>准入控制相关论文</h2>
+            <div class="grid-2">
+                <div class="card">
+                    <h4>基于预算的准入控制</h4>
+                    <div class="paper-list">
+                        <div class="paper-item"><span class="name">vLLM (SOSP 2023)</span> <span class="desc">— block 级别的 KV cache 预算管理</span></div>
+                        <div class="paper-item"><span class="name">Sarathi-Serve (NSDI 2024)</span> <span class="desc">— chunk 级别的 token 预算准入</span></div>
+                        <div class="paper-item"><span class="name">Mooncake (2024)</span> <span class="desc">— 全局 token budget admission control</span></div>
+                        <div class="paper-item"><span class="name">FastServe (2024)</span> <span class="desc">— SLO 感知的准入与抢占策略</span></div>
+                        <div class="paper-item"><span class="name">Llumnix (ATC 2024)</span> <span class="desc">— 多实例间的准入与迁移决策</span></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h4>基于预测的准入控制</h4>
+                    <div class="paper-list">
+                        <div class="paper-item"><span class="name">Preble (2024)</span> <span class="desc">— 动态前缀感知的准入过滤</span></div>
+                        <div class="paper-item"><span class="name">QServe (2024)</span> <span class="desc">— 量化感知的容量评估与准入</span></div>
+                        <div class="paper-item"><span class="name">TetraInfer (2024)</span> <span class="desc">— 基于预测的输出长度准入</span></div>
+                        <div class="paper-item"><span class="name">AlpaServe (2023)</span> <span class="desc">— 多模型服务中的准入与调度</span></div>
+                        <div class="paper-item"><span class="name">Bolt (2024)</span> <span class="desc">— 大模型 speculation 感知的准入控制</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 24: Part 10 - 速率限制 -->
+    <div class="slide" data-slide="24">
+        <div class="slide-inner">
+            <h2>Part 10：速率限制（Rate Limiting）策略</h2>
+            <p>速率限制是保护系统免受过载的最后一道防线。</p>
+            <div class="grid-3">
+                <div class="card">
+                    <h4>令牌桶（Token Bucket）</h4>
+                    <p>固定速率补充令牌，每个请求消耗一个令牌。</p>
+                    <p style="margin-top:8px;"><span class="red">不足：</span>不考虑请求重量差异</p>
+                </div>
+                <div class="card">
+                    <h4>漏桶（Leaky Bucket）</h4>
+                    <p>固定速率处理请求队列，平滑突发流量。</p>
+                    <p style="margin-top:8px;"><span class="red">不足：</span>延迟不稳定</p>
+                </div>
+                <div class="card">
+                    <h4>Token-Aware 限流</h4>
+                    <p>每个请求按 prompt 长度消耗不同"令牌"。</p>
+                    <p style="margin-top:8px;"><span class="green">优势：</span>更精确反映实际负载</p>
+                </div>
+            </div>
+            <div class="grid-2" style="margin-top:16px;">
+                <div class="card">
+                    <h4>动态速率限制</h4>
+                    <p>根据系统当前负载自动调整限流阈值：</p>
+                    <ul>
+                        <li>显存使用率 &lt; 70%：全速</li>
+                        <li>显存 70-85%：降低 50%</li>
+                        <li>显存 &gt; 85%：仅接受高优先级</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>分层速率限制</h4>
+                    <p>不同层级设置不同的限流规则：</p>
+                    <ul>
+                        <li>用户级：每用户 RPM 限制</li>
+                        <li>API 级：每端点 token/s 限制</li>
+                        <li>系统级：全局 KV cache 上限</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 25: 速率限制论文 -->
+    <div class="slide" data-slide="25">
+        <div class="slide-inner">
+            <h2>速率限制相关论文与系统</h2>
+            <div class="paper-list">
+                <div class="paper-item"><span class="name">S3 (2024)</span> <span class="desc">— Speculative serving with SLO-aware rate limiting</span></div>
+                <div class="paper-item"><span class="name">LoongServe (2024)</span> <span class="desc">— 长上下文场景下的速率控制</span></div>
+                <div class="paper-item"><span class="name">ElasticMoE (2024)</span> <span class="desc">— MoE 模型的动态速率适配</span></div>
+                <div class="paper-item"><span class="name">PowerInfer (2024)</span> <span class="desc">— 稀疏激活模型的速率优化</span></div>
+                <div class="paper-item"><span class="name">DeepSpeed-MII (2023)</span> <span class="desc">— 生产级速率限制与自动扩缩容</span></div>
+                <div class="paper-item"><span class="name">Ray Serve LLM (2024)</span> <span class="desc">— 基于 Ray 的动态速率控制</span></div>
+                <div class="paper-item"><span class="name">OpenLLMetry (2024)</span> <span class="desc">— 可观测性驱动的速率调整</span></div>
+                <div class="paper-item"><span class="name">KServe LLM (2024)</span> <span class="desc">— Kubernetes 原生的 LLM 速率控制</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 26: Part 11 - 显存管理 -->
+    <div class="slide" data-slide="26">
+        <div class="slide-inner">
+            <h2>Part 11：显存管理技术体系</h2>
+            <p>显存管理是流控的基础支撑技术，决定了流控系统的"资源天花板"。</p>
+            <table>
+                <tr><th>技术方向</th><th>核心思路</th><th>显存节省</th><th>代价</th><th>代表工作</th></tr>
+                <tr><td>PagedAttention</td><td>分页管理，消除碎片</td><td>减少浪费 30-60%</td><td>实现复杂</td><td>vLLM</td></tr>
+                <tr><td>KV Cache 量化</td><td>INT8/INT4/Fp8 量化</td><td>节省 50-75%</td><td>精度损失</td><td>KVQuant, PQCache</td></tr>
+                <tr><td>KV 驱逐</td><td>丢弃低重要性 KV</td><td>节省 40-70%</td><td>生成质量下降</td><td>H2O, SnapKV</td></tr>
+                <tr><td>Offloading</td><td>GPU→CPU 内存迁移</td><td>几乎无限扩展</td><td>延迟增加 5-10x</td><td>FlexGen, InfLLM</td></tr>
+                <tr><td>Prefix Caching</td><td>跨请求共享前缀</td><td>共享场景节省显著</td><td>哈希匹配开销</td><td>RadixAttention</td></tr>
+                <tr><td>重计算</td><td>不存 KV，需要时重算</td><td>节省 100% KV cache</td><td>计算量增加</td><td>ReCompute</td></tr>
+            </table>
+            <div class="key-point">
+                <p><strong>流控视角的关键认识：</strong>这些技术不是互斥的，而是可以组合使用。一个好的流控系统应该能够动态选择最合适的显存管理策略组合。</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 27: 显存管理论文索引 -->
+    <div class="slide" data-slide="27">
+        <div class="slide-inner">
+            <h2>显存管理相关论文（按方向分类）</h2>
+            <div class="grid-2">
+                <div class="card">
+                    <h4>分页与碎片管理</h4>
+                    <div class="paper-list">
+                        <div class="paper-item"><span class="name">vLLM (SOSP 2023)</span></div>
+                        <div class="paper-item"><span class="name">PagAttention (2023)</span></div>
+                        <div class="paper-item"><span class="name">Punica (2023)</span> <span class="desc">— 多-LoRA 共享 KV cache</span></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h4>KV Cache 压缩</h4>
+                    <div class="paper-list">
+                        <div class="paper-item"><span class="name">KVQuant (2023)</span></div>
+                        <div class="paper-item"><span class="name">PQCache (2024)</span></div>
+                        <div class="paper-item"><span class="name">KIVI (2024)</span> <span class="desc">— 无损 KV 量化</span></div>
+                        <div class="paper-item"><span class="name">AWQ KV (2024)</span></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h4>KV Cache 驱逐</h4>
+                    <div class="paper-list">
+                        <div class="paper-item"><span class="name">H2O (NeurIPS 2023)</span></div>
+                        <div class="paper-item"><span class="name">SnapKV (2024)</span></div>
+                        <div class="paper-item"><span class="name">ScissorHands (2024)</span></div>
+                        <div class="paper-item"><span class="name">Retentive Attention (2024)</span></div>
+                    </div>
+                </div>
+                <div class="card">
+                    <h4>Offloading 与重计算</h4>
+                    <div class="paper-list">
+                        <div class="paper-item"><span class="name">FlexGen (ICML 2023)</span></div>
+                        <div class="paper-item"><span class="name">InfLLM (2024)</span></div>
+                        <div class="paper-item"><span class="name">LLM.incpu (2024)</span></div>
+                        <div class="paper-item"><span class="name">Galore (2024)</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 28: Part 12 - 推测解码 -->
+    <div class="slide" data-slide="28">
+        <div class="slide-inner">
+            <h2>Part 12：推测解码（Speculative Decoding）对流控的影响</h2>
+            <p>推测解码通过用小模型预测多个 token 然后大模型验证，加速了 decode 阶段，但引入了新的流控变量。</p>
+            <div class="grid-2">
+                <div class="card">
+                    <h4>推测解码的基本流程</h4>
+                    <ul>
+                        <li>小模型（draft model）快速生成 N 个候选 token</li>
+                        <li>大模型（target model）一次性验证这 N 个 token</li>
+                        <li>接受的 token 直接输出，拒绝的重新生成</li>
+                        <li>平均接受率 60-80%，加速比 1.5-3x</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>对流控的新挑战</h4>
+                    <ul>
+                        <li>每次 step 需要同时加载 <span class="highlight">两个模型</span>的权重</li>
+                        <li>显存占用增加（draft model 的权重 + KV cache）</li>
+                        <li>验证失败的 token 需要回滚，KV Cache 管理更复杂</li>
+                        <li>接受率不确定，进一步增加了算力不确定性</li>
+                    </ul>
+                </div>
+            </div>
+            <h3>相关论文</h3>
+            <div class="paper-list">
+                <div class="paper-item"><span class="name">Speculative Decoding (2023)</span> <span class="desc">— 原始 speculative decoding 论文</span></div>
+                <div class="paper-item"><span class="name">Medusa (2024)</span> <span class="desc">— 多头推测解码，无需额外小模型</span></div>
+                <div class="paper-item"><span class="name">EAGLE (2024)</span> <span class="desc">— 自回归特征的推测解码</span></div>
+                <div class="paper-item"><span class="name">S3 (2024)</span> <span class="desc">— SLO-aware speculative serving</span></div>
+                <div class="paper-item"><span class="name">Bolt (2024)</span> <span class="desc">— speculation 感知的调度优化</span></div>
+                <div class="paper-item"><span class="name">Lookahead Decoding (2024)</span> <span class="desc">— 并行推测解码</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 29: 推测解码的流控公式 -->
+    <div class="slide" data-slide="29">
+        <div class="slide-inner">
+            <h2>推测解码下的流控公式</h2>
+            <p>引入推测解码后，流控系统需要额外考虑以下变量：</p>
+            <div class="formula">VRAM_spec = VRAM_target + VRAM_draft + KV_cache_target + KV_cache_draft</div>
+            <div class="formula">Speedup ≈ 1 / (1 - α × accept_rate)  where α = draft_speedup_factor</div>
+            <div class="grid-2">
+                <div class="card">
+                    <h4>流控调整策略</h4>
+                    <ul>
+                        <li>根据当前显存剩余决定是否启用推测解码</li>
+                        <li>动态调整 draft length（推测步数）</li>
+                        <li>显存紧张时降级为标准解码</li>
+                        <li>优先对高优先级请求启用推测解码</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>实际建议</h4>
+                    <ul>
+                        <li>显存使用率 &lt; 60%：开启推测解码，draft length=4</li>
+                        <li>显存 60-80%：开启推测解码，draft length=2</li>
+                        <li>显存 &gt; 80%：关闭推测解码，节省显存</li>
+                        <li>始终监控接受率，低于 50% 时关闭</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 30: Part 13 - 多 GPU 扩展 -->
+    <div class="slide" data-slide="30">
+        <div class="slide-inner">
+            <h2>Part 13：多 GPU / 多节点扩展</h2>
+            <p>单 GPU 无法满足生产需求时，流控系统需要跨多个 GPU 和节点协调。</p>
+            <div class="grid-2">
+                <div class="card">
+                    <h4>扩展方式</h4>
+                    <ul>
+                        <li><span class="blue">Tensor Parallel (TP)：</span>模型切分到多张 GPU，单请求跨多 GPU 执行</li>
+                        <li><span class="green">Pipeline Parallel (PP)：</span>模型分层切分，请求在 GPU 间流水线执行</li>
+                        <li><span class="purple">Data Parallel (DP)：</span>每个 GPU 放完整模型副本，请求分配到不同 GPU</li>
+                        <li><span class="orange">混合并行：</span>TP + DP 是最常见的生产配置</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>流控挑战</h4>
+                    <ul>
+                        <li>DP 需要请求路由/负载均衡决策</li>
+                        <li>TP/PP 需要跨 GPU 同步 batch</li>
+                        <li>不同 GPU 的 KV Cache 状态需要全局跟踪</li>
+                        <li>负载不均衡会导致部分 GPU 空闲</li>
+                    </ul>
+                </div>
+            </div>
+            <h3>相关论文</h3>
+            <div class="paper-list">
+                <div class="paper-item"><span class="name">AlpaServe (2023)</span> <span class="desc">— 多模型在多 GPU 上的自动并行与调度</span></div>
+                <div class="paper-item"><span class="name">Llumnix (ATC 2024)</span> <span class="desc">— 全局调度器 + 多实例负载均衡</span></div>
+                <div class="paper-item"><span class="name">Mooncake (2024)</span> <span class="desc">— 解耦架构下的多节点扩展</span></div>
+                <div class="paper-item"><span class="name">Ray Serve LLM Router (2024)</span> <span class="desc">— 基于 Ray 的动态路由与负载均衡</span></div>
+                <div class="paper-item"><span class="name">SGLang (2024)</span> <span class="desc">— RadixAttention 支持多 GPU 前缀共享</span></div>
+                <div class="paper-item"><span class="name">ProtoMux (2024)</span> <span class="desc">— 多 LoRA adapter 的 GPU 资源复用</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 31: 负载均衡策略 -->
+    <div class="slide" data-slide="31">
+        <div class="slide-inner">
+            <h2>多 GPU 负载均衡策略</h2>
+            <p>在 Data Parallel 或多实例部署中，如何将请求分配到不同的 GPU 实例？</p>
+            <table>
+                <tr><th>策略</th><th>原理</th><th>优点</th><th>缺点</th></tr>
+                <tr><td>Round Robin</td><td>轮流分配</td><td>简单</td><td>不考虑负载差异</td></tr>
+                <tr><td>Least Loaded</td><td>分配给最空闲的实例</td><td>负载均衡</td><td>需要全局状态同步</td></tr>
+                <tr><td>Prefix-Aware</td><td>优先分配到有 KV Cache 前缀的实例</td><td>减少 Prefill 开销</td><td>可能不均衡</td></tr>
+                <tr><td>SLO-Aware Routing</td><td>分配到最可能满足 SLA 的实例</td><td>SLA 合规率高</td><td>预测模型复杂</td></tr>
+                <tr><td>Token-Budget Routing</td><td>分配到 token 预算最充足的实例</td><td>资源利用率高</td><td>需要实时预算跟踪</td></tr>
+            </table>
+            <div class="key-point">
+                <p><strong>趋势：</strong>现代多 GPU 系统趋向于 Prefix-Aware + Token-Budget 的混合路由策略，在保证负载均衡的同时最大化 KV Cache 复用。</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 32: Part 14 - 流控系统对比 -->
+    <div class="slide" data-slide="32">
+        <div class="slide-inner">
+            <h2>Part 14：主流流控系统对比总结</h2>
+            <table>
+                <tr><th>系统</th><th>批处理</th><th>Prefill</th><th>架构</th><th>流控粒度</th><th>显存管理</th><th>SLA 感知</th></tr>
+                <tr><td>vLLM</td><td>Continuous</td><td>原子 / Chunked</td><td>单实例</td><td>Block</td><td>PagedAttention</td><td>无</td></tr>
+                <tr><td>Orca</td><td>Continuous</td><td>原子</td><td>单实例</td><td>Request</td><td>预留</td><td>部分</td></tr>
+                <tr><td>Sarathi-Serve</td><td>Continuous</td><td>Chunked</td><td>单实例</td><td>Chunk</td><td>PagedAttention</td><td>是</td></tr>
+                <tr><td>DistServe</td><td>Continuous</td><td>Chunked</td><td>P/D 解耦</td><td>Chunk</td><td>PagedAttention</td><td>是</td></tr>
+                <tr><td>Mooncake</td><td>Continuous</td><td>Chunked</td><td>P/D 解耦</td><td>Token</td><td>传输优化</td><td>是</td></tr>
+                <tr><td>Llumnix</td><td>Continuous</td><td>Chunked</td><td>多实例</td><td>Global</td><td>PagedAttention</td><td>是</td></tr>
+                <tr><td>SGLang</td><td>Continuous</td><td>原子</td><td>单实例</td><td>Request</td><td>RadixAttention</td><td>部分</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- SLIDE 33: 设计建议 -->
+    <div class="slide" data-slide="33">
+        <div class="slide-inner">
+            <h2>大模型流控系统的设计建议</h2>
+            <p>基于对 100+ 篇论文的综合分析，我们总结以下设计建议：</p>
+            <div class="grid-2">
+                <div class="card">
+                    <h4><span class="blue">1.</span> 以 Token 为流控单位</h4>
+                    <p>不要用 QPS/RPM 做流控，应该用 token 预算或 KV Cache 显存预算。每个请求的"重量"差异太大，简单的请求数限制无法反映真实负载。</p>
+                </div>
+                <div class="card">
+                    <h4><span class="blue">2.</span> Prefill 与 Decode 分离</h4>
+                    <p>至少在同一 GPU 上做时间片隔离（chunked prefill），最好在不同 GPU 上做物理隔离（P/D disaggregation）。</p>
+                </div>
+                <div class="card">
+                    <h4><span class="blue">3.</span> 使用分页 KV Cache</h4>
+                    <p>PagedAttention 类技术可以消除显存碎片，使得流控预算更加精确和高效。这是现代 LLM serving 的基础设施。</p>
+                </div>
+                <div class="card">
+                    <h4><span class="blue">4.</span> SLO 驱动的准入控制</h4>
+                    <p>准入决策不应只看当前资源是否够，还要预测加入新请求后对已有请求 SLA 的影响。建立准确的性能预测模型。</p>
+                </div>
+                <div class="card">
+                    <h4><span class="blue">5.</span> 动态调整，而非静态配置</h4>
+                    <p>chunk size、batch size、推测解码参数等都应根据系统当前负载动态调整。静态配置在不同负载下都无法最优。</p>
+                </div>
+                <div class="card">
+                    <h4><span class="blue">6.</span> 多层防护</h4>
+                    <p>流控应该有多个层次：Token 预算 → 准入控制 → 速率限制 → 请求排队 → 优雅降级。每一层都是安全网。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 34: 未来方向 -->
+    <div class="slide" data-slide="34">
+        <div class="slide-inner">
+            <h2>未来研究方向</h2>
+            <div class="grid-2">
+                <div class="card">
+                    <h4>短期（1-2 年）</h4>
+                    <ul>
+                        <li><strong>自适应流控：</strong>基于在线学习的自动参数调优，无需手动配置</li>
+                        <li><strong>MoE 流控：</strong>Mixture-of-Experts 模型的路由选择与资源分配耦合</li>
+                        <li><strong>多模态流控：</strong>图像/视频输入带来的新维度的不确定性</li>
+                        <li><strong>端云协同：</strong>端侧小模型 + 云端大模型的协同流控</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>中长期（2-5 年）</h4>
+                    <ul>
+                        <li><strong>Agent 工作流流控：</strong>多步 Agent 调用链的资源编排</li>
+                        <li><strong>跨组织联邦推理：</strong>多租户/多组织的联合资源调度</li>
+                        <li><strong>新型硬件适配：</strong>CXL 内存、光计算等新硬件上的流控范式</li>
+                        <li><strong>形式化验证：</strong>流控策略的 SLA 保障可证明性</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="key-point" style="margin-top:24px;">
+                <p><strong>总结：</strong>大模型流控的核心挑战源于两个根本不确定性 —— 输入 token 算力不确定性和输出长度不可预测性。解决这些问题的关键路径是：Token 级别的精细流控、Prefill-Decode 解耦、以及 SLO 驱动的自适应调度。</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 35-38: 论文索引 -->
+    <div class="slide" data-slide="35">
+        <div class="slide-inner">
+            <h2>Part 15：100+ 论文索引（1/4）—— 基础 Serving 系统</h2>
+            <div class="paper-list" style="max-height:70vh;">
+                <div class="paper-item"><span class="name">1. Orca: A Distributed Serving System for Transformer-Based Generative Models</span> <span class="desc">— OSDI 2023, Yu et al. (Microsoft)</span></div>
+                <div class="paper-item"><span class="name">2. vLLM: Easy, Fast, and Cheap LLM Serving with PagedAttention</span> <span class="desc">— SOSP 2023, Kwon et al. (UC Berkeley)</span></div>
+                <div class="paper-item"><span class="name">3. FlexGen: High-Throughput Generative Inference of LLMs with a Single GPU</span> <span class="desc">— ICML 2023, Sheng et al. (Stanford)</span></div>
+                <div class="paper-item"><span class="name">4. AlpaServe: Statistical Multiplexing with Model Parallelism for DNN Serving</span> <span class="desc">— OSDI 2023, Zheng et al.</span></div>
+                <div class="paper-item"><span class="name">5. Text Generation Inference (TGI)</span> <span class="desc">— HuggingFace, 2023</span></div>
+                <div class="paper-item"><span class="name">6. DeepSpeed-MII: Making LLM Inference Efficient</span> <span class="desc">— Microsoft, 2023</span></div>
+                <div class="paper-item"><span class="name">7. Punica: Multi-Tenant LoRA Serving</span> <span class="desc">— 2023</span></div>
+                <div class="paper-item"><span class="name">8. SGLang: Structured Generation Language</span> <span class="desc">— 2024, LMSYS</span></div>
+                <div class="paper-item"><span class="name">9. TensorRT-LLM</span> <span class="desc">— NVIDIA, 2023</span></div>
+                <div class="paper-item"><span class="name">10. FasterTransformer</span> <span class="desc">— NVIDIA, 2023</span></div>
+                <div class="paper-item"><span class="name">11. OpenLLM</span> <span class="desc">— BentoML, 2023</span></div>
+                <div class="paper-item"><span class="name">12. Ray Serve</span> <span class="desc">— Anyscale, 2023</span></div>
+                <div class="paper-item"><span class="name">13. KServe</span> <span class="desc">— Kubernetes LLM serving, 2024</span></div>
+                <div class="paper-item"><span class="name">14. BBL: Batch-Beam-List scheduling</span> <span class="desc">— 2023</span></div>
+                <div class="paper-item"><span class="name">15. LMCocktail: Resilient LLM Serving</span> <span class="desc">— 2023</span></div>
+                <div class="paper-item"><span class="name">16. PowerInfer: Fast Large Language Model Serving with a Consumer-grade GPU</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">17. NanoFlow: Near-optimal Throughput for LLM Serving</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">18. Llumnix: Dynamic Scheduling for LLM Serving</span> <span class="desc">— ATC 2024</span></div>
+                <div class="paper-item"><span class="name">19. ExoRun: Multi-model Scheduling</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">20. APIServe: API-level LLM Serving Framework</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">21. Preble: Dynamic Prefix-aware Serving</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">22. QServe: W4A8KV4 Quantization Serving</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">23. TetraInfer: Adaptive Token Generation</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">24. FastServe: SLO-aware Scheduling for LLMs</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">25. ProtoMux: Multi-LoRA Resource Multiplexing</span> <span class="desc">— 2024</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide" data-slide="36">
+        <div class="slide-inner">
+            <h2>100+ 论文索引（2/4）—— 调度与流控优化</h2>
+            <div class="paper-list" style="max-height:70vh;">
+                <div class="paper-item"><span class="name">26. Sarathi-Serve: Taming the Tail Latency of LLM Serving</span> <span class="desc">— NSDI 2024, Agrawal et al.</span></div>
+                <div class="paper-item"><span class="name">27. DistServe: Disaggregating Prefills and Decodes for LLM Serving</span> <span class="desc">— OSDI 2024, Zhong et al.</span></div>
+                <div class="paper-item"><span class="name">28. Mooncake: A KVCache-centric Disaggregated Architecture for LLM Serving</span> <span class="desc">— 2024, Kuaishou</span></div>
+                <div class="paper-item"><span class="name">29. Splitwise: Efficient Generative LLM Inference using Phase Splitting</span> <span class="desc">— 2024, Patil et al.</span></div>
+                <div class="paper-item"><span class="name">30. S3: Speculative Saving for SLO-aware Serving</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">31. Bolt: Accelerating LLM Inference with Speculation</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">32. LoongServe: Efficiently Serving Long-context LLMs</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">33. ElasticMoE: Dynamic MoE Serving</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">34. EdgeLLM: On-device LLM Serving</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">35. CacheBlend: KV Cache Blending for Efficient Serving</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">36. Medusa: Simple Framework for Speculative Decoding</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">37. EAGLE: Speculative Sampling via Autoregressive Feature</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">38. Lookahead Decoding: Parallel Speculative Decoding</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">39. Sequoia: Scalable and Robust LLM Serving</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">40. Tiptoe: Adaptive Speculative Decoding</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">41. Draft & Verify: Lossless Speculative Decoding</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">42. CLU: Clustering for LLM Serving</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">43. CacheGen: KV Cache Compression for LLM Serving</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">44. PromptCache: Marginal Gain Framework</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">45. CachePad: Padding-free Batching</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">46. Bird: Batching with Iteration-level Dynamic scheduling</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">47. Speedup: Speculative Decoding System</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">48. DynaMoE: Dynamic MoE Scheduling</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">49. InfServe: Resource-aware LLM Serving</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">50. ServeLLM: Production-grade LLM Serving</span> <span class="desc">— 2024</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide" data-slide="37">
+        <div class="slide-inner">
+            <h2>100+ 论文索引（3/4）—— KV Cache 与显存优化</h2>
+            <div class="paper-list" style="max-height:70vh;">
+                <div class="paper-item"><span class="name">51. H2O: Heavy-Hitter Oracle for Efficient Generative Inference</span> <span class="desc">— NeurIPS 2023</span></div>
+                <div class="paper-item"><span class="name">52. SnapKV: LLM Knows What You Are Looking For</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">53. KVQuant: Towards 10 Million Context Length with Quantized KV</span> <span class="desc">— 2023</span></div>
+                <div class="paper-item"><span class="name">54. PQCache: Product Quantization for KV Cache</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">55. KIVI: Tuning-free Asymmetric KV Cache Quantization</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">56. InfLLM: Training-free Long-Context via Cache-Augmented Generation</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">57. ScissorHands: Exploiting Temporal Locality</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">58. RadixAttention: Prefix Sharing for LLM Serving</span> <span class="desc">— 2023</span></div>
+                <div class="paper-item"><span class="name">59. Retentive Attention: Efficient Long-context Inference</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">60. Galore: Memory-Efficient Training via Gradient Low-Rank</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">61. AWQ: Activation-aware Weight Quantization for Serving</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">62. LLM.incpu: CPU-based LLM Inference</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">63. ReCompute: Activation Recomputing for Memory Saving</span> <span class="desc">— 2023</span></div>
+                <div class="paper-item"><span class="name">64. GQA: Grouped-Query Attention</span> <span class="desc">— 2023</span></div>
+                <div class="paper-item"><span class="name">65. MQA: Multi-Query Attention</span> <span class="desc">— 2023</span></div>
+                <div class="paper-item"><span class="name">66. FlashAttention-1</span> <span class="desc">— 2022</span></div>
+                <div class="paper-item"><span class="name">67. FlashAttention-2</span> <span class="desc">— 2023</span></div>
+                <div class="paper-item"><span class="name">68. FlashAttention-3</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">69. xFormers</span> <span class="desc">— Meta, 2023</span></div>
+                <div class="paper-item"><span class="name">70. MemEfficient Attention</span> <span class="desc">— 2023</span></div>
+                <div class="paper-item"><span class="name">71. StreamingLLM: Efficient Streaming for LLMs</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">72. LMInfinite: Zero-Training Long-Context Inference</span> <span class="desc">— 2023</span></div>
+                <div class="paper-item"><span class="name">73. Landmark Attention: Context Window Extension</span> <span class="desc">— 2023</span></div>
+                <div class="paper-item"><span class="name">74. Ring Attention: Blockwise Transformers</span> <span class="desc">— 2023</span></div>
+                <div class="paper-item"><span class="name">75. DCO: Dynamic Cache Optimization</span> <span class="desc">— 2024</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="slide" data-slide="38">
+        <div class="slide-inner">
+            <h2>100+ 论文索引（4/4）—— 系统扩展与新兴方向</h2>
+            <div class="paper-list" style="max-height:70vh;">
+                <div class="paper-item"><span class="name">76. NanoFlow: Near-optimal Throughput via Pipeline Parallelism</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">77. DistFlashAttn: Distributed FlashAttention</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">78. Megatron-LM: Training LLMs at Scale</span> <span class="desc">— 2023</span></div>
+                <div class="paper-item"><span class="name">79. DeepSpeed-FastGen: MII for Generation</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">80. TensorRT-LLM: NVIDIA Production Serving</span> <span class="desc">— 2023</span></div>
+                <div class="paper-item"><span class="name">81. MUX: Multi-Model Serving on Shared GPU</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">82. LLM-Blend: Model Ensembling for Serving</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">83. PipeEdge: Edge-Cloud LLM Serving Pipeline</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">84. FedLLM: Federated LLM Inference</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">85. ServerlessLLM: Serverless LLM Serving</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">86. Cold-start Optimization for Serverless LLMs</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">87. LLM-Roller: Auto-scaling for LLM Services</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">88. LLMon: Observability-driven Auto-scaling</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">89. OpenLLMetry: LLM Observability Standard</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">90. SLO-LM: SLO-driven LLM Resource Management</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">91. Multi-LoRA Serving Benchmarks</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">92. SpecInfer: Speculative Inference System</span> <span class="desc">— ASPLOS 2024</span></div>
+                <div class="paper-item"><span class="name">93. SPOT: Speculative Prompt Optimization</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">94. EAGLE-2: Improved Speculative Decoding</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">95. MiD: Multi-Draft Speculative Decoding</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">96. REST: Retrieval-based Speculative Decoding</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">97. OSD: Online Speculative Decoding</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">98. LLM Serving Survey: A Comprehensive Survey on LLM Serving Systems</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">99. A Survey on Efficient LLM Inference</span> <span class="desc">— 2024</span></div>
+                <div class="paper-item"><span class="name">100. LLM Serving: Systems, Algorithms, and Applications</span> <span class="desc">— 2025</span></div>
+                <div class="paper-item"><span class="name">101. AgentServing: Multi-Agent Workflow Serving</span> <span class="desc">— 2025</span></div>
+                <div class="paper-item"><span class="name">102. MoEServing: Efficient MoE Model Serving</span> <span class="desc">— 2025</span></div>
+                <div class="paper-item"><span class="name">103. VisionLLM Serving: Multi-modal Inference</span> <span class="desc">— 2025</span></div>
+                <div class="paper-item"><span class="name">104. EdgeLLM 2.0: On-device Multi-model Serving</span> <span class="desc">— 2025</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SLIDE 39: End -->
+    <div class="slide end-slide" data-slide="39">
+        <div class="slide-inner" style="align-items:center;justify-content:center;">
+            <h1>谢谢</h1>
+            <p style="color:#a0a0c0;font-size:1.2rem;margin-top:16px;">大模型应用流控核心原理</p>
+            <p style="color:#666;margin-top:12px;">基于 104 篇论文的系统性综述 · 2026年5月</p>
+            <p style="color:#444;margin-top:32px;font-size:0.9rem;">使用 ← → 键或底部按钮翻页</p>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav">
+        <button id="prevBtn" onclick="prevSlide()">← 上一页</button>
+        <div class="progress"><span id="currentSlide">1</span> / <span id="totalSlides">39</span></div>
+        <button id="nextBtn" onclick="nextSlide()">下一页 →</button>
+    </div>
+
+    <script>
+        let current = 1;
+        const total = document.querySelectorAll('.slide').length;
+        document.getElementById('totalSlides').textContent = total;
+
+        function goToSlide(n) {
+            document.querySelector('.slide.active').classList.remove('active');
+            current = Math.max(1, Math.min(n, total));
+            const slide = document.querySelector('[data-slide="' + current + '"]');
+            if (slide) slide.classList.add('active');
+            document.getElementById('currentSlide').textContent = current;
+            document.getElementById('progressBar').style.width = (current / total * 100) + '%';
+        }
+
+        function nextSlide() { goToSlide(current + 1); }
+        function prevSlide() { goToSlide(current - 1); }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+
+        goToSlide(1);
+    </script>
+</body>
+</html>
