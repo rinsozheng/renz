@@ -47,12 +47,6 @@ daily memory
 - [Monica](https://monica.cn/)
 - [Xiaoyi](https://xiaoyi.huawei.com/chat)
 
-## HW
-- [MlOps](https://mlops.huawei.com)
-- [DevMate](https://devmate.huawei.com)
-- [Asko3](https://asko3.o3community.huawei.com)
-- [FAE](http://faecopilot.rnd.huawei.com)
-
 ## Skills
 - [Clawhub](https://clawhub.ai/)
 - [SkillsSH](https://skills.sh/)
