@@ -1,5 +1,3 @@
-  codex：主要问题
-
 # Codex：主要问题
 
 ## 1. 双扣令牌风险
@@ -68,7 +66,8 @@ HTTP 重试只对 429/5xx 响应生效；网络异常/超时在第 208-215 行�
 
 ---
 
-trae：我来深入分析项目代码，看看有哪些可以优化的地方。
+# trae：我来深入分析项目代码，看看有哪些可以优化的地方。
+
  The user is asking for optimization suggestions, but neither the skill-creator nor web-dev categories apply here. I need to dig into the actual code to identify concrete improvements I can recommend.
 
  I'm starting to examine the olc-python project to assess its code quality across the relevant modules.
@@ -77,7 +76,7 @@ Now I have enough context. Let me check a few more details quickly.
 
 Now I have enough information to produce a comprehensive report. Let me write the analysis in Chinese.
 
-# olc-python 项目代码质量审查报告
+**olc-python 项目代码质量审查报告**
 
 以下分析覆盖了 limit 模块（qps_token_bucket、quota_bucket、concurrent_limiter）、cache 模块（safe_ttl_cache）、control/handler chain、collector 模块和测试覆盖五个方面。所有问题均通过完整阅读相关源代码与测试代码后总结得出。
 
