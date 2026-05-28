@@ -8,7 +8,6 @@
 
 > 🔴 **这是我建议最先修的逻辑问题。**
 
----
 
 ## 2. 配置快照非真正不可变
 
@@ -18,7 +17,6 @@
 
 **建议**：返回 `deepcopy` 或不可变配置对象，并把更新改成整体替换引用。
 
----
 
 ## 3. HTTP 重试策略不完整
 
@@ -28,7 +26,6 @@ HTTP 重试只对 429/5xx 响应生效；网络异常/超时在第 208-215 行�
 
 **建议**：统一重试策略，支持可注入 `backoff`/`sleep`，测试里避免真实等待。
 
----
 
 ## 4. 定时任务异常丢失 + 并发不安全
 
@@ -39,7 +36,6 @@ HTTP 重试只对 429/5xx 响应生效；网络异常/超时在第 208-215 行�
 
 **建议**：给 `future` 加 `done callback` 记录异常，并统一用锁保护 `scheduler`/`tasks`/`pool` 状态。
 
----
 
 ## 5. "Safe"缓存名不副实
 
@@ -50,7 +46,6 @@ HTTP 重试只对 429/5xx 响应生效；网络异常/超时在第 208-215 行�
 
 **建议**：补锁、修正返回值或类型签名。
 
----
 
 ## 6. 工程化配置偏弱
 
@@ -62,9 +57,8 @@ HTTP 重试只对 429/5xx 响应生效；网络异常/超时在第 208-215 行�
 
 
 
-
-
 ---
+
 
 # trae：我来深入分析项目代码，看看有哪些可以优化的地方。
 
@@ -79,8 +73,6 @@ Now I have enough information to produce a comprehensive report. Let me write th
 **olc-python 项目代码质量审查报告**
 
 以下分析覆盖了 limit 模块（qps_token_bucket、quota_bucket、concurrent_limiter）、cache 模块（safe_ttl_cache）、control/handler chain、collector 模块和测试覆盖五个方面。所有问题均通过完整阅读相关源代码与测试代码后总结得出。
-
----
 
 ## 一、limit 模块
 
@@ -107,8 +99,6 @@ Now I have enough information to produce a comprehensive report. Let me write th
 **[性能] AtomicNum 内部就有锁，但外层又再加 `threading.Lock`**
 - 所有 `_token_number.*` 调用都已加内部锁；外层 `self._lock` 包住整个 `try_acquire` 是必要的，但 `pre_check` 中又不加锁，且 `_last_token_number` 是普通 attribute（[L47, L70, L86, L94](file:///d:/code/github/olc-python/olc/limit/node/qps_token_bucket.py#L47)），并发下可能被覆盖。
 
----
-
 ### 2. [quota_bucket.py](file:///d:/code/github/olc-python/olc/limit/node/quota_bucket.py)
 
 **[Bug] `_refresh_token` 重置窗口可能丢令牌**
@@ -126,7 +116,6 @@ Now I have enough information to produce a comprehensive report. Let me write th
 **[性能/正确性] `multiply` 之后值可能超过 `rate_limit`**
 - [L89](file:///d:/code/github/olc-python/olc/limit/node/quota_bucket.py#L89)：`_token_number.multiply(ratio)` 没有再 `min(_, _rate_limit)`，假设 `_token_number=10`、`_rate_limit=10`、`update_rate(15)`，结果 `_token_number=15`，符合期望；但如果 `_refresh_token` 刚好已经触发并把 `_token_number=10`，然后并发 `update_rate(15)`，可能出现 `15` 后再次 `_refresh_token` 重置回 `rate_limit=15`，无问题。但若 `update_rate` 与 `_refresh_token` 交叉，且 `_rate_limit` 还是旧的，`_refresh_token` 用旧 `_rate_limit` 重置——存在不一致。
 
----
 
 ### 3. [concurrent_limiter.py](file:///d:/code/github/olc-python/olc/limit/node/static/concurrent_limiter.py) 与 [dynamic_concurrent_limiter.py](file:///d:/code/github/olc-python/olc/limit/node/dynamic/dynamic_concurrent_limiter.py)
 
@@ -145,7 +134,6 @@ Now I have enough information to produce a comprehensive report. Let me write th
 **[Bug] `cancel_newest_request` 调用频率与策略**
 - [L31-39](file:///d:/code/github/olc-python/olc/limit/node/dynamic/dynamic_concurrent_limiter.py#L31-L39)：每次 `refresh_rate_limiter` 都按差值取消最新请求，但没有任何延迟或软限制机制，"取消"只是设置 `is_cancelled` 标志（[olc_request_registry.py:34-40](file:///d:/code/github/olc-python/olc/control/context/olc_request_registry.py#L34-L40)），框架其他位置并未读取该标志（grep 仅发现此处赋值），因此取消逻辑事实上无效。
 
----
 
 ### 4. [abs_dynamic_limiter.py](file:///d:/code/github/olc-python/olc/limit/abs_dynamic_limiter.py)
 
