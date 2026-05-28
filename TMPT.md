@@ -1,20 +1,20 @@
   codex：主要问题
 
-  1. olc/limit/node/qps_token_bucket.py:75
+1. olc/limit/node/qps_token_bucket.py:75
      wait_time_ms > 0 时，令牌足够的分支会在 _reserve_wait_time() 里扣一次令牌，第 129-130 行又再扣一次，存在“双扣令牌”的行为风险。这是我建议最先修的逻辑
      问题。
-  2. olc/config/properties_loader.py:269
+2. olc/config/properties_loader.py:269
      PropertiesManager.get() 说是“配置快照”，但实际直接返回内部可变对象。调用方可以无锁修改全局配置；热加载时第 234-237 行也是原对象字段级替换，并不是真正
      原子替换。建议返回 deepcopy 或不可变配置对象，并把更新改成整体替换引用。
-  3. olc/remote/http_client.py:167
+3. olc/remote/http_client.py:167
      HTTP 重试只对 429/5xx 响应生效；网络异常/超时在第 208-215 行直接 break，不会按 max_retries 重试。对远程配置、Prometheus 这类场景可靠性不足。建议统一
      重试策略，支持可注入 backoff/sleep，测试里避免真实等待。
-  4. olc/task_schedule/task_schedule.py:160
+4. olc/task_schedule/task_schedule.py:160
      定时任务提交后忽略 Future，任务内部异常不会被记录或传播；同时 stop_all_tasks() 第 359-362 行无锁遍历 _tasks，和增删任务并发时有风险。建议给 future 加
      done callback 记录异常，并统一用锁保护 scheduler/tasks/pool 状态。
-  5. olc/cache/safe__ttl_cache.py:83
+5. olc/cache/safe__ttl_cache.py:83
      contains() 没加锁，和类名“Safe”不一致；refresh() 标注返回 Optional[T]，实际不返回值。建议补锁、修正返回值或类型签名。
-  6. pyproject.toml:1
+6. pyproject.toml:1
      工程化配置偏弱：只有 black，没有 pytest/ruff/mypy/coverage/pre-commit 配置，也没有 lock 文件。作者信息还是占位值。建议补最小质量门禁：ruff check、
      ruff format 或 black、pytest、覆盖率阈值、CI。
 
