@@ -31,6 +31,7 @@ daily memory
 - [Mistral](https://chat.mistral.ai)
 
 ## Chinese LLM
+- [QwenPaw](https://rinso.nat100.top/)
 - [QianWen](https://www.tongyi.com/)
 - [DeepSeek](https://chat.deepseek.com)
 - [DouBao](https://www.doubao.com/)
